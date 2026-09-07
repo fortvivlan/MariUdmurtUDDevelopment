@@ -1,6 +1,10 @@
 # Local corpora and earlier work
 .legacy/
 rawtexts/
+data/
+runs/
+notebooks/
+.cache/
 *.csv
 *.conllu
 
@@ -13,6 +17,7 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.venv-*/
 venv/
 env/
 ENV/

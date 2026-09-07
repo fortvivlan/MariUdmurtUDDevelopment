@@ -1,0 +1,13 @@
+{
+  "model": "cis-lmu/glot500-base",
+  "revision": "main",
+  "data": "data/prepared/original-v1",
+  "language_weights": {"mhr": 0.3, "udm": 0.3, "nio": 0.3, "enets": 0.03333333333333333, "nenets": 0.03333333333333333, "sel": 0.03333333333333333},
+  "targets": ["mhr", "udm", "nio"],
+  "max_length": 256,
+  "batch_size": 2,
+  "accumulation_steps": 16,
+  "epochs": 5,
+  "device": "cuda",
+  "precision": "bf16"
+}

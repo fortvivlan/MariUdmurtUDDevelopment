@@ -1,0 +1,15 @@
+{
+  "model": "cis-lmu/glot500-base",
+  "data": "data/prepared/original-v1",
+  "max_length": 256,
+  "batch_size": 2,
+  "accumulation_steps": 2,
+  "epochs": 1,
+  "device": "cuda",
+  "precision": "bf16",
+  "max_train_blocks_per_language": 4,
+  "eval_max_blocks": 2,
+  "train_diagnostic_blocks": 2,
+  "logging_steps": 1,
+  "checkpoint_steps": 3
+}
