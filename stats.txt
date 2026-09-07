@@ -1,0 +1,10 @@
+Mari (mari.csv)
+  Articles:      11,452
+  Sentences:    172,795
+  Tokens:     2,216,696
+
+Udmurt (udmurt.csv)
+  Articles:       5,985
+  Sentences:     59,730
+  Tokens:       852,056
+
