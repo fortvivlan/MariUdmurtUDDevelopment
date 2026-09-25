@@ -1,0 +1,13 @@
+{
+  "source_manifest": "data/ud/r2.18/prepared/manifest.json",
+  "backbone": "runs/01/best_model",
+  "source_languages": ["fi", "hu", "myv", "mdf", "et", "koi", "kpv", "yrk"],
+  "device": "cuda",
+  "precision": "bf16",
+  "max_steps": 8,
+  "accumulation": 1,
+  "evaluate_every": 4,
+  "log_every": 1,
+  "eval_max_sentences": 8,
+  "smoke": true
+}

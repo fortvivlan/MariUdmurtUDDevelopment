@@ -1,0 +1,7 @@
+{
+  "source_manifest": "data/ud/r2.18/prepared/manifest.json",
+  "backbone": "runs/01/best_model",
+  "source_languages": ["fi", "hu", "myv", "mdf", "et", "koi", "kpv", "yrk"],
+  "device": "cuda",
+  "precision": "bf16"
+}

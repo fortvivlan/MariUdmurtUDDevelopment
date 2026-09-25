@@ -1,0 +1,10 @@
+{
+  "source_manifest": "data/ud/r2.18/prepared/manifest.json",
+  "backbone": "cis-lmu/glot500-base",
+  "tokenizer": "runs/01/best_model",
+  "revision": "d4d7c1ec01828fdf7452a4ccf7b55177aced175e",
+  "parent_run": "runs/parser-all-001",
+  "source_languages": ["fi", "hu", "myv", "mdf", "et", "koi", "kpv", "yrk"],
+  "device": "cuda",
+  "precision": "bf16"
+}
