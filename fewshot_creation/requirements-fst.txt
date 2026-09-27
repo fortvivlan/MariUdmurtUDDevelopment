@@ -1,0 +1,6 @@
+# Install in an isolated virtual environment; HFST lookup is an OS package.
+uniparser-meadow-mari==1.1.18
+uniparser-udmurt==2.3.1
+uniparser-morph==2.11.0
+textdistance==4.6.3
+importlib-resources==7.1.0

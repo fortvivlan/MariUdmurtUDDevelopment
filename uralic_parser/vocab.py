@@ -30,3 +30,21 @@ def build_vocab(train_files: dict[str, Path]) -> dict:
         "feats": {key: ["_"] + sorted(values) for key, values in sorted(features.items())},
         "lemma_rule_counts": dict(rules),
     }
+
+
+def extend_vocab(parent: dict, observed: dict) -> dict:
+    """Append target labels without changing any parent checkpoint class index."""
+    result = {}
+    for key in ("upos", "deprel", "lemma_rules"):
+        result[key] = list(parent[key]) + [value for value in observed[key]
+                                          if value not in parent[key]]
+    result["feats"] = {
+        key: list(values) + [value for value in observed["feats"].get(key, [])
+                             if value not in values]
+        for key, values in parent["feats"].items()
+    }
+    for key, values in observed["feats"].items():
+        if key not in result["feats"]:
+            result["feats"][key] = list(values)
+    result["lemma_rule_counts"] = dict(observed.get("lemma_rule_counts", {}))
+    return result

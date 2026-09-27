@@ -127,12 +127,9 @@ reads only syntactic word `FORM` values from `mari.conllu` and
 enter inference or the output. It selects 5–50-word sentences with seed 42,
 excluding ASCII Latin text, wiki pipe markup, and punctuation-heavy fragments.
 
-```powershell
-python predict_fewshot.py --run runs/parser-all-001 --output runs/parser-all-001/fewshot-002
-```
-
-The output contains `mhr-forms.conllu` and `udm-forms.conllu` as the exact model
-inputs, `mhr-predicted.conllu` and `udm-predicted.conllu` as CoNLL-U drafts,
+The historical `predict_fewshot.py` script created zero-shot drafts with
+`mhr-forms.conllu` and `udm-forms.conllu` as the exact model inputs,
+`mhr-predicted.conllu` and `udm-predicted.conllu` as CoNLL-U drafts,
 and a provenance `manifest.json`. The drafts contain predicted LEMMA, UPOS,
 FEATS, HEAD and DEPREL, with XPOS and DEPS unset. `# source_id` and
 `# source_sent_id` link them to the original articles and sentences. Treat
@@ -140,18 +137,27 @@ FEATS, HEAD and DEPREL, with XPOS and DEPS unset. `# source_id` and
 adjudicate before using these rows as few-shot training labels. Keep their
 article-level split as `train` in all later experiments.
 
-The linked `fewshot-004` annotation draft restores each original source
+The retained `runs/parser-all-001/fewshot-004` annotation draft restores each original source
 sentence as `# text` and infers `SpaceAfter=No` from adjacent word forms in
 that exact text. Source article and sentence IDs must match, and every word
 form must align in order; the script fails on a mismatch. It also adds
 `# text_en` from the separately saved, provisional English translations.
 The translations are annotation aids, not gold data or parser inputs.
-Use `fewshot-004` for annotation; `fewshot-003` was superseded after two
-translations changed during file assembly.
+The files for current manual annotation are in `data/fewshot_batches/004/`.
+Earlier `fewshot-001` through `fewshot-003` drafts were removed after the
+final `fewshot-004` draft was assembled.
 
-```powershell
-python enrich_fewshot.py --input runs/parser-all-001/fewshot-002 --translations runs/parser-all-001/fewshot-002/translations-en.json --output runs/parser-all-001/fewshot-004
-```
+The retained `fewshot-004-fst-review-v3` run holds both UniParser and GiellaLT
+analyses, lemma audits, and the four source review files. The annotation copies
+in `data/fewshot_batches/004/` contain the final English translations. See the
+[few-shot creation instructions](../fewshot_creation/instructions.md) to run
+the analyzers and publish later batches.
+
+After `fewshot-004` is manually adjudicated, use the repeatable
+[few-shot creation instructions](../fewshot_creation/instructions.md) for
+linked target fine-tuning, fresh sampling, two-analyzer lemma comparison,
+translation handoff, and later rounds. The root scripts above remain for the
+historical zero-shot drafts.
 
 ## Final evaluation
 

@@ -22,6 +22,14 @@ instructions](uralic_parser/instructions.md). Human-testing notebooks are
 generated locally and ignored by Git. Future work includes controlled
 transliteration/transcription experiments.
 
+The [few-shot creation workflow](fewshot_creation/instructions.md) repeats
+manual Mari/Udmurt annotation, linked parser fine-tuning, fresh form-only
+predictions, UniParser/GiellaLT lemma comparison, and separate rough English
+translation. Its review files keep model and FST suggestions distinct until
+human adjudication. The four files for each annotation batch are published in
+ignored `data/fewshot_batches/`; run manifests and FST analyses stay under
+`runs/`.
+
 Parser code adapted from [BaseUDParser](https://github.com/fortvivlan/BaseUDParser)
 is GPL-3.0; see [LICENSE](LICENSE). The bundled UD scorer retains MPL-2.0 terms.
 

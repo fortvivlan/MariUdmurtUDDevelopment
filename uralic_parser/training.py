@@ -18,7 +18,7 @@ from safetensors.torch import load_file, save_file
 from uralic_lm.common import file_hash, fingerprint, read_json, utc_now, write_json
 from .conllu import read_conllu
 from .model import JointUDParser
-from .vocab import build_vocab
+from .vocab import build_vocab, extend_vocab
 
 
 ALL_LANGUAGES = ("fi", "hu", "myv", "mdf", "et", "koi", "kpv", "yrk")
@@ -32,6 +32,9 @@ class TrainConfig:
     tokenizer: str | None = None
     revision: str | None = None
     parent_run: str | None = "runs/01"
+    init_parser_run: str | None = None
+    target_manifest: str | None = None
+    target_fraction: float = .5
     source_languages: list[str] = field(default_factory=lambda: list(ALL_LANGUAGES))
     seed: int = 42
     device: str = "cuda"
@@ -88,6 +91,10 @@ class TrainConfig:
             raise ValueError("Invalid weight decay or warmup")
         if not 0 < self.sampling_alpha <= 1 or not 0 <= self.dropout < 1:
             raise ValueError("Invalid sampling alpha or dropout")
+        if not 0 < self.target_fraction < 1:
+            raise ValueError("target_fraction must be between zero and one")
+        if bool(self.init_parser_run) != bool(self.target_manifest):
+            raise ValueError("init_parser_run and target_manifest must be set together")
 
 
 def _environment() -> dict:
@@ -107,6 +114,7 @@ def _environment() -> dict:
 def _code_hashes() -> dict[str, str]:
     root = Path(__file__).resolve().parent.parent
     paths = list((root / "uralic_parser").glob("*.py")) + [root / "finetune_parser.py"]
+    paths += list((root / "fewshot_creation").glob("*.py"))
     return {str(path.relative_to(root)): file_hash(path) for path in sorted(paths)}
 
 
@@ -250,6 +258,31 @@ def _autocast(config: TrainConfig):
     return torch.autocast("cuda", dtype=torch.bfloat16) if config.precision == "bf16" else nullcontext()
 
 
+def _load_parent_weights(model: JointUDParser, parent_run: Path, parent_vocab: dict,
+                         device: str) -> None:
+    """Transfer all shared weights, preserving label indices as vocab grows."""
+    previous = load_file(str(parent_run / "best_model" / "model.safetensors"), device=device)
+    current = model.state_dict()
+    expandable = {"rel_biaffine.weight", "upos_head.4.weight", "upos_head.4.bias",
+                  "lemma_head.4.weight", "lemma_head.4.bias"}
+    # _mlp is Dropout, Linear, ReLU, Dropout, Linear.
+    for index, key in enumerate(parent_vocab["feats"]):
+        expandable.update({f"feature_heads.{index}.4.weight",
+                           f"feature_heads.{index}.4.bias"})
+    for name, value in previous.items():
+        if name not in current:
+            raise ValueError(f"Parent parameter missing in new model: {name}")
+        if name in expandable:
+            if value.shape[1:] != current[name].shape[1:] or value.shape[0] > current[name].shape[0]:
+                raise ValueError(f"Incompatible expanded parameter: {name}")
+            current[name][:value.shape[0]] = value
+        elif value.shape == current[name].shape:
+            current[name] = value
+        else:
+            raise ValueError(f"Incompatible parent parameter: {name}")
+    model.load_state_dict(current)
+
+
 def train(config: TrainConfig, run: Path, resume: bool = False) -> dict:
     config.validate()
     if config.device == "cuda" and not torch.cuda.is_available():
@@ -266,16 +299,40 @@ def train(config: TrainConfig, run: Path, resume: bool = False) -> dict:
     train_data = {language: list(read_conllu(path)) for language, path in train_files.items()}
     if any(not rows for rows in train_data.values()):
         raise ValueError("At least one source training split is empty")
-    dev_data = {language: _eval_subset(list(read_conllu(
+    source_dev_data = {language: _eval_subset(list(read_conllu(
                     manifest["outputs"][f"{language}/dev"]["path"])),
                     config.eval_max_sentences, config.seed)
                 for language in SELECTION_LANGUAGES}
-    vocab = build_vocab(train_files)
+    target_identity = None
+    if config.target_manifest:
+        target_manifest = read_json(config.target_manifest)
+        for language in ("mhr", "udm"):
+            train_files[language] = Path(target_manifest["languages"][language]["train"])
+            train_data[language] = list(read_conllu(train_files[language]))
+        dev_data = {language: list(read_conllu(
+                    target_manifest["languages"][language]["dev"]))
+                    for language in ("mhr", "udm")}
+        if any(not rows for rows in [*train_data.values(), *dev_data.values()]):
+            raise ValueError("Few-shot train and development files must be nonempty")
+        target_identity = {"manifest_sha256": file_hash(config.target_manifest),
+                           "files": {language: {split: file_hash(
+                               target_manifest["languages"][language][split])
+                               for split in ("train", "dev")}
+                               for language in ("mhr", "udm")}}
+        parent_path = Path(config.init_parser_run)
+        parent_vocab = read_json(parent_path / "vocab.json")
+        vocab = extend_vocab(parent_vocab, build_vocab(train_files))
+    else:
+        dev_data = source_dev_data
+        vocab = build_vocab(train_files)
     identity = {
         "config": asdict(config), "source_fingerprint": manifest["fingerprint"],
         "backbone": _backbone_identity(config), "vocab_fingerprint": fingerprint(vocab),
         "tokenizer": _tokenizer_identity(config),
         "code": _code_hashes(),
+        "target": target_identity,
+        "init_parser_checkpoint_sha256": (file_hash(Path(config.init_parser_run) /
+            "best_model" / "model.safetensors") if config.init_parser_run else None),
         "selection": {language: fingerprint([sentence.metadata.get("sent_id")
                                               for sentence in rows])
                       for language, rows in dev_data.items()},
@@ -304,11 +361,26 @@ def train(config: TrainConfig, run: Path, resume: bool = False) -> dict:
                           gradient_checkpointing=config.gradient_checkpointing,
                           revision=config.revision,
                           tokenizer_path=config.tokenizer).to(config.device)
+    if config.init_parser_run and not resume:
+        _load_parent_weights(model, Path(config.init_parser_run), parent_vocab, config.device)
     optimizer = _optimizer(model, config)
     scheduler = _scheduler(optimizer, config)
     rng = random.Random(config.seed)
     languages = list(config.source_languages)
-    probabilities_by_language = _sampler_weights(train_data, config.sampling_alpha)
+    if config.target_manifest:
+        source_weights = _sampler_weights(
+            {language: train_data[language] for language in config.source_languages},
+            config.sampling_alpha)
+        probabilities_by_language = {
+            **{language: weight * (1 - config.target_fraction)
+               for language, weight in source_weights.items()},
+            "mhr": config.target_fraction / 2,
+            "udm": config.target_fraction / 2,
+        }
+    else:
+        probabilities_by_language = _sampler_weights(train_data, config.sampling_alpha)
+    languages = (["mhr", "udm", *config.source_languages]
+                 if config.target_manifest else list(probabilities_by_language))
     probabilities = [probabilities_by_language[language] for language in languages]
     progress = {"step": 0, "best_macro_las": -1., "best_step": None,
                 "bad_evaluations": 0, "exposure": {language: 0 for language in languages}}
@@ -365,6 +437,8 @@ def train(config: TrainConfig, run: Path, resume: bool = False) -> dict:
                 total_loss = 0.0
             if step % config.evaluate_every == 0 or step == config.max_steps:
                 metrics = _evaluate(model, dev_data, config.microbatch)
+                source_diagnostics = (_evaluate(model, source_dev_data, config.microbatch)
+                                      if config.target_manifest else None)
                 macro_las = sum(value["las"] for value in metrics.values()) / len(metrics)
                 improved = macro_las > progress["best_macro_las"]
                 if improved:
@@ -377,7 +451,8 @@ def train(config: TrainConfig, run: Path, resume: bool = False) -> dict:
                 else:
                     progress["bad_evaluations"] += 1
                 _events(run, "evaluation", step=step, macro_las=macro_las,
-                        metrics=metrics, improved=improved)
+                        metrics=metrics, source_diagnostics=source_diagnostics,
+                        improved=improved)
                 _save_latest(run, model, optimizer, scheduler, rng, progress)
                 if progress["bad_evaluations"] >= config.early_stopping_patience:
                     break

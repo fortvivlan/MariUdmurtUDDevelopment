@@ -1,0 +1,8 @@
+{
+  "max_steps": 2,
+  "evaluate_every": 1,
+  "log_every": 1,
+  "eval_max_sentences": 8,
+  "accumulation": 1,
+  "smoke": true
+}
