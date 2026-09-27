@@ -13,6 +13,15 @@ model. Its underlying `sentencepiece.bpe.model` is byte-identical to the file
 at the pinned original revision, so tokenization is shared across conditions.
 This also avoids a tokenizer conversion error in the local Windows environment.
 
+With Transformers 4.57.6, loading `runs/01/best_model` may emit a warning to set
+`fix_mistral_regex=True`. This is a false positive for this checkpoint: its
+`config.json` identifies XLM-R, and its `tokenizer.json` uses a Unigram model
+with Metaspace pretokenization, rather than the Mistral regex pretokenizer.
+Do not apply the Mistral flag to this tokenizer; it targets a different
+pretokenizer and is inappropriate for the backbone adaptation. The warning
+comes from Transformers' detection of large-vocabulary local checkpoints
+saved with version 4.57.6.
+
 The parser's mean-subtoken encoder, biaffine arc/relation scoring and lemma edit
 approach are adapted from [BaseUDParser at commit
 `62c70e4`](https://github.com/fortvivlan/BaseUDParser/commit/62c70e47766b509c7c97ef53421c0193902366e6)
@@ -107,6 +116,42 @@ This baseline uses a whole-encoder learning rate of `1e-5`, head learning rate
 `1e-4`, AdamW weight decay `0.01`, 6% warmup, linear decay, BF16, gradient
 checkpointing, microbatch 2 and accumulation 16. Word-aligned subtoken pooling
 uses overlapping 512-token windows; no sentence is silently truncated.
+
+## Zero-shot drafts for few-shot training
+
+Use the selected `best_model` checkpoint to label 200 Mari and 200 Udmurt
+sentences from distinct Wikipedia articles in the **training** split. This
+keeps the validation and test articles reserved for evaluation. The script
+reads only syntactic word `FORM` values from `mari.conllu` and
+`udmurt.conllu`; original lemma, POS, features, and other annotations do not
+enter inference or the output. It selects 5–50-word sentences with seed 42,
+excluding ASCII Latin text, wiki pipe markup, and punctuation-heavy fragments.
+
+```powershell
+python predict_fewshot.py --run runs/parser-all-001 --output runs/parser-all-001/fewshot-002
+```
+
+The output contains `mhr-forms.conllu` and `udm-forms.conllu` as the exact model
+inputs, `mhr-predicted.conllu` and `udm-predicted.conllu` as CoNLL-U drafts,
+and a provenance `manifest.json`. The drafts contain predicted LEMMA, UPOS,
+FEATS, HEAD and DEPREL, with XPOS and DEPS unset. `# source_id` and
+`# source_sent_id` link them to the original articles and sentences. Treat
+`annotation_status = ZERO_SHOT_DRAFT` as a draft marker; manually correct and
+adjudicate before using these rows as few-shot training labels. Keep their
+article-level split as `train` in all later experiments.
+
+The linked `fewshot-004` annotation draft restores each original source
+sentence as `# text` and infers `SpaceAfter=No` from adjacent word forms in
+that exact text. Source article and sentence IDs must match, and every word
+form must align in order; the script fails on a mismatch. It also adds
+`# text_en` from the separately saved, provisional English translations.
+The translations are annotation aids, not gold data or parser inputs.
+Use `fewshot-004` for annotation; `fewshot-003` was superseded after two
+translations changed during file assembly.
+
+```powershell
+python enrich_fewshot.py --input runs/parser-all-001/fewshot-002 --translations runs/parser-all-001/fewshot-002/translations-en.json --output runs/parser-all-001/fewshot-004
+```
 
 ## Final evaluation
 

@@ -12,6 +12,9 @@ from uralic_parser.lemma import apply_lemma_rule, lemma_rule
 from uralic_parser.mst import decode_single_root
 from uralic_parser.prepare import _split_internal
 from uralic_parser.evaluation import _official_score, bootstrap_uas_las, paired_difference
+from predict_fewshot import select_form_only, usable_forms
+from uralic_lm.common import fingerprint
+from enrich_fewshot import enrich, spaces_after
 
 
 SAMPLE = Sentence([
@@ -23,6 +26,44 @@ SAMPLE = Sentence([
 
 
 class ParserDataTests(unittest.TestCase):
+    def test_original_text_spacing_is_restored(self):
+        self.assertEqual(spaces_after(["ӱдыр", ",", "йоча", "."],
+                                      "ӱдыр, йоча."), [True, False, True, False])
+        with self.assertRaises(ValueError):
+            spaces_after(["ӱдыр", "йоча"], "ӱдыр — йоча")
+        draft = Sentence(["# sent_id = mhr-fewshot-0001",
+                          "# annotation_status = ZERO_SHOT_DRAFT",
+                          "1\tӱдыр\tӱдыр\tNOUN\t_\t_\t0\troot\t_\t_",
+                          "2\t,\t,\tPUNCT\t_\t_\t1\tpunct\t_\t_",
+                          "3\tйоча\tйоча\tNOUN\t_\t_\t1\tconj\t_\t_",
+                          "4\t.\t.\tPUNCT\t_\t_\t1\tpunct\t_\t_"])
+        result = enrich(draft, "ӱдыр, йоча.", "A girl, a child.")
+        self.assertEqual(result.metadata["text"], "ӱдыр, йоча.")
+        self.assertEqual(result.metadata["text_en"], "A girl, a child.")
+        self.assertEqual([line.split("\t")[9] for line in result.lines if not line.startswith("#")],
+                         ["SpaceAfter=No", "_", "SpaceAfter=No", "_"])
+
+    def test_fewshot_selection_uses_training_forms_only(self):
+        self.assertFalse(usable_forms(["thumb", "|", "right", "|", "250", "px"]))
+        self.assertTrue(usable_forms(["ӱдыр", "йоча", "пӧрт", "."]))
+        train_id = "mhr:wiki:" + fingerprint("train article")[:20]
+        test_id = "mhr:wiki:" + fingerprint("test article")[:20]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.conllu"
+            rows = []
+            for article, sent_id in (("train article", "1"), ("test article", "2")):
+                rows.extend([f"# sent_id = {sent_id}", f"# article = {article}",
+                             "1\tӱдыр\twrong\tNOUN\tN\tCase=Nom\t_\t_\t_\t_",
+                             "2\tйоча\twrong\tVERB\tV\tMood=Ind\t_\t_\t_\t_",
+                             "3\tпӧрт\twrong\tX\t_\t_\t_\t_\t_\t_", ""])
+            source.write_text("\n".join(rows), encoding="utf-8")
+            chosen, details = select_form_only(source, "mhr", {train_id: "train",
+                                                       test_id: "test"}, 1, 42, 3, 50)
+        self.assertEqual(details["selection"][0]["source_id"], train_id)
+        self.assertEqual([word.form for word in chosen[0].words], ["ӱдыр", "йоча", "пӧрт"])
+        self.assertTrue(all(word.lemma == word.upos == word.feats == "_"
+                            for word in chosen[0].words))
+
     def test_unicode_lemma_rule_roundtrip(self):
         for form, lemma in (("Ёж", "ёж"), ("пӧртъёс", "пӧрт"),
                             ("мӱндӱ", "Мӱндӱ"), ("ёлка", "ёлка")):
