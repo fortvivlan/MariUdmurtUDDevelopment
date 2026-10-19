@@ -30,6 +30,9 @@ human adjudication. The four files for each annotation batch are published in
 ignored `data/fewshot_batches/`; run manifests and FST analyses stay under
 `runs/`.
 
+Manual annotation follows the [Meadow Mari UD annotation guidelines](Mari_UD_annotation_guidelines.md)
+(pilot draft). Separate Udmurt annotation guidelines will be added later.
+
 Parser code adapted from [BaseUDParser](https://github.com/fortvivlan/BaseUDParser)
 is GPL-3.0; see [LICENSE](LICENSE). The bundled UD scorer retains MPL-2.0 terms.
 
