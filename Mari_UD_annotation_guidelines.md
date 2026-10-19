@@ -502,13 +502,13 @@ Working decision from the discussion:
 
 ## 12. Questions and checks
 
-### 12.1. Explicit questions for Юлия (human expert)
+### 12.1. Explicit questions for the human expert
 
 - [ ] **E1 — Status of `уке`.** Is the negative existential synchronically an adjective-like nonverbal predicate, or a suppletive negative verb in the `улаш` paradigm? Consequences: `ADJ Polarity=Neg` vs `VERB`, and the structure of `уке улыт`. See [§7.4](#74-existential-уло-улыт-уке).
 - [ ] **E2 — `чумыр`: quantifier vs adjective.** Are ‘whole class’ and ‘common language’ distinct syntactic uses requiring `DET PronType=Tot` vs `ADJ`, or one adjective lexeme throughout? Compare the four expressions under [§5.6](#56-indefinite-and-total-pro-forms).
 - [ ] **E3 — Future-necessitive `-шаш`.** Is its grammatical invariant prospectivity, deontic necessity, or both? Would a semantic `Aspect=Prosp` be justified in addition to, or instead of, morphological `PartForm=FutNec`? See [§8](#8-non-finite-verb-forms).
 
-### 12.2. Other open annotation and corpus issues (not explicitly assigned to Юлия)
+### 12.2. Other open annotation and corpus issues (not explicitly assigned to the human expert)
 
 - [ ] **R1 — Temporal lexicalization.** Decide `шочмын` (weekday `-н`), daypart forms with `дене`, and ‘yesterday/tomorrow’ according to synchronic morphology and corpus usage.
 - [ ] **R2 — Quantifier POS conflict.** Reconcile the initial `ADJ` list (`шуко`, `ятыр`, `шагал`, `икмыняр(е)`, `южо`, `иктаж-мыняр`) with contextual `DET/PRON` choices.
