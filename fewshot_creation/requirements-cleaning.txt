@@ -1,0 +1,4 @@
+# Optional local language identification and Russian dictionary for cleaning.
+fasttext-community==0.11.8
+pymorphy3==2.0.6
+pymorphy3-dicts-ru==2.4.417150.4580142

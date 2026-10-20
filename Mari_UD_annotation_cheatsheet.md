@@ -79,6 +79,8 @@
 | `Number` | `Sing`, `Plur` | Plural markers noted: `-влак`, `-шамыч`, `-ла`, `-мыт`. |
 | `Number[psor]` | `Sing`, `Plur` | Number of possessor where overt. |
 | `Person[psor]` | `1`, `2`, `3` | Person of possessor where overt. |
+| `Polarity` | `Neg` | Verb nominalizations with -дымаш. |
+| `VerbForm` | `Vnoun` | Verb nominalizations with -маш and -дымаш. |
 
 **Temporal nominal examples:** `июньышто` → `Case=Ine`, `шошым` → `Case=Acc`, `895-ше ийыште` → `ийыште Case=Ine`, all with `obl:tmod` when modifying a predicate. The same applies to the other seasons (`телым`, `кенгежым`, `шыжым`).
 
@@ -284,6 +286,7 @@ The long semantic particle inventory remains in [the full project guidelines](Ma
 | [`compound:svc`](https://universaldependencies.org/u/dep/compound-svc.html) | Single motion event from converb manner + finite path verb; `compound:svc(йоген, эрта)` in `йоген эрта` ‘flows past’. | **Provisional**; review the head choice. |
 | [`nmod:poss`](https://universaldependencies.org/u/dep/nmod-poss.html) | Genitive possessor modifies a noun; `nmod:poss(пӧртет, тыйын)` ‘your house’. | Working convention. |
 | [`obl:tmod`](https://universaldependencies.org/u/dep/obl-tmod.html) | Temporal **nominal** adjunct; `шошым`, `июньышто`, `ийыште`. | Working convention. |
+| `nmod:obj` | Direct object or nominalised verbs with -маш. | Working convention. |
 
 Other general UD subtypes may become appropriate (`acl:relcl`, `nsubj:pass`, etc.) after the first manually verified sample; they are **not** yet independently specified in these Mari notes.
 

@@ -5,8 +5,11 @@ entry point with `run`, `predict`, `fst`, `add-translations`, and `publish` comm
 every round in a new ignored `runs/` directory and keep corrected corpora under
 ignored `data/`; never edit a completed run. Keep only the four CoNLL-U files
 used for manual annotation in each `data/fewshot_batches/<batch>/` directory;
-manifests and analyzer traces stay under `runs/`. The first round starts from the
-200 Mari and 200 Udmurt drafts in `runs/parser-all-001/fewshot-004`.
+manifests and analyzer traces stay under `runs/`. The current first round uses
+the cleaned, replenished 200-sentence drafts for each language in
+`runs/fewshot-004-cleaned-002/predictions`. The earlier
+`runs/parser-all-001/fewshot-004` is historical provenance; it no longer matches
+the manually edited, cleaned batch. See [the cleaning record](../docs/target-cleaning.md).
 
 ## 1. Correct the current batch
 
@@ -15,7 +18,7 @@ Save human-adjudicated files as
 `data/fewshot/corrected-004/udm-corrected.conllu`. Start from the corresponding
 `data/fewshot_batches/004/*-model-review.conllu` files. Correct LEMMA, UPOS, FEATS, HEAD,
 DEPREL, and any tokenization errors. Preserve `sent_id`, `source_id`,
-`source_sent_id`, and the original `# text`. Set every sentence's
+`source_sent_id`, and the current cleaned `# text`. Set every sentence's
 `# annotation_status = GOLD_ADJUDICATED`. Do not leave review notation such as
 `model?FST` or `model?` in lexical lemmas. The pipeline checks IDs, source
 splits, trees, and unresolved marks before training.
@@ -23,7 +26,10 @@ The four current annotation files are in `data/fewshot_batches/004/`:
 `mhr-model-review.conllu`, `udm-model-review.conllu`, `mhr-fst.conllu`, and
 `udm-fst.conllu`. The model review files already carry the existing `# text_en`
 comments and are the starting drafts. Their FST analyses, audits, and copy
-provenance remain in `runs/parser-all-001/fewshot-004-fst-review-v3/`.
+provenance for the refreshed batch are in `runs/fewshot-004-cleaned-002/`.
+Reviewed Mari entries through `0036`, including the standalone `0015-1`
+Yandex sentence, were preserved. Sentence `0036` still has its pre-existing
+two-root tree and needs that HEAD issue resolved before gold validation.
 
 ## 2. Smoke check and create the next parser batch
 
@@ -34,7 +40,7 @@ GPU smoke cycle in a disposable new output directory:
 
 ```powershell
 & $python -m pytest -q
-& $python -m fewshot_creation.pipeline run --round-id smoke-0002 --parent-run runs/parser-all-001 --corrected data/fewshot/corrected-004 --draft runs/parser-all-001/fewshot-004 --work-dir runs/fewshot-smoke-0002 --training-overrides fewshot_creation/smoke-overrides.json --per-language 2
+& $python -m fewshot_creation.pipeline run --round-id smoke-0002 --parent-run runs/parser-all-001 --corrected data/fewshot/corrected-004 --draft runs/fewshot-004-cleaned-002/predictions --work-dir runs/fewshot-smoke-0002 --training-overrides fewshot_creation/smoke-overrides.json --per-language 2
 ```
 
 Inspect `runs/fewshot-smoke-0002/parser/summary.json` and its prediction
@@ -43,7 +49,7 @@ The smoke round is a compatibility check and must not be annotated or
 included among later `--draft` inputs. Then run the full cycle:
 
 ```powershell
-& $python -m fewshot_creation.pipeline run --round-id 0002 --parent-run runs/parser-all-001 --corrected data/fewshot/corrected-004 --draft runs/parser-all-001/fewshot-004 --work-dir runs/fewshot-cycle-0002
+& $python -m fewshot_creation.pipeline run --round-id 0002 --parent-run runs/parser-all-001 --corrected data/fewshot/corrected-004 --draft runs/fewshot-004-cleaned-002/predictions --work-dir runs/fewshot-cycle-0002
 ```
 
 The default is 200 new sentences per language. `targets/` holds cumulative
@@ -68,7 +74,7 @@ prediction output directory:
 
 ```powershell
 & $python finetune_parser.py --resume runs/fewshot-cycle-0002/parser
-& $python -m fewshot_creation.pipeline predict --round-id 0002 --run runs/fewshot-cycle-0002/parser --target-manifest runs/fewshot-cycle-0002/targets/manifest.json --draft runs/parser-all-001/fewshot-004 --output runs/fewshot-cycle-0002/predictions
+& $python -m fewshot_creation.pipeline predict --round-id 0002 --run runs/fewshot-cycle-0002/parser --target-manifest runs/fewshot-cycle-0002/targets/manifest.json --draft runs/fewshot-004-cleaned-002/predictions --output runs/fewshot-cycle-0002/predictions
 ```
 
 ## 3. Run the two FST analyzers
@@ -156,7 +162,7 @@ list **all** corrected and corresponding draft directories in chronological
 order, one pair per batch. For example:
 
 ```powershell
-& $python -m fewshot_creation.pipeline run --round-id 0003 --parent-run runs/fewshot-cycle-0002/parser --corrected data/fewshot/corrected-004 --draft runs/parser-all-001/fewshot-004 --corrected data/fewshot/corrected-0002 --draft runs/fewshot-cycle-0002/predictions --work-dir runs/fewshot-cycle-0003
+& $python -m fewshot_creation.pipeline run --round-id 0003 --parent-run runs/fewshot-cycle-0002/parser --corrected data/fewshot/corrected-004 --draft runs/fewshot-004-cleaned-002/predictions --corrected data/fewshot/corrected-0002 --draft runs/fewshot-cycle-0002/predictions --work-dir runs/fewshot-cycle-0003
 ```
 
 The `--draft` history prevents sentence reuse; a different sentence from an

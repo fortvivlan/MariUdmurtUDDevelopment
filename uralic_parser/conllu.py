@@ -55,7 +55,7 @@ def read_conllu(path: str | Path) -> Iterator[Sentence]:
     with Path(path).open(encoding="utf-8-sig") as stream:
         for raw in stream:
             line = raw.rstrip("\r\n")
-            if line:
+            if line.strip():
                 lines.append(line)
             elif lines:
                 yield Sentence(lines)

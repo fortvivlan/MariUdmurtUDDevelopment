@@ -144,6 +144,10 @@ form must align in order; the script fails on a mismatch. It also adds
 `# text_en` from the separately saved, provisional English translations.
 The translations are annotation aids, not gold data or parser inputs.
 The files for current manual annotation are in `data/fewshot_batches/004/`.
+They were subsequently cleaned and replenished: the matching current reference
+drafts are in `runs/fewshot-004-cleaned-002/predictions`, not the historical
+`fewshot-004` directory. See [the cleaning record](target-cleaning.md) for
+backups, counts, and the preserved annotation issue at Mari `0036`.
 Earlier `fewshot-001` through `fewshot-003` drafts were removed after the
 final `fewshot-004` draft was assembled.
 
